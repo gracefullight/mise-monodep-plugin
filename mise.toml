@@ -1,5 +1,35 @@
+[settings]
+experimental = true
+
+[hooks]
+postinstall = '''
+  mkdir -p .git/hooks
+
+  # commit-msg
+  cat > .git/hooks/commit-msg <<'EOF'
+#!/bin/sh
+exec mise run git:commit-msg -- "$1"
+EOF
+  chmod +x .git/hooks/commit-msg
+
+  # pre-commit
+  cat > .git/hooks/pre-commit <<'EOF'
+#!/bin/sh
+exec mise run git:pre-commit
+EOF
+  chmod +x .git/hooks/pre-commit
+
+  # pre-push
+  cat > .git/hooks/pre-push <<'EOF'
+#!/bin/sh
+exec mise run git:pre-push
+EOF
+  chmod +x .git/hooks/pre-push
+'''
+
 [tools]
 rust = "1.93"
+bun = "latest"
 
 [tasks.test]
 description = "Run monodep tests"
@@ -11,5 +41,30 @@ description = "Build monodep release binary"
 run = "cargo build --release"
 
 [tasks.lint]
-description = "Check clippy and formatting"
+description = "Run clippy and format check"
 run = ["cargo clippy -- -D warnings", "cargo fmt --check"]
+
+[tasks."git:commit-msg"]
+description = "Validate commit message using commitlint"
+run = "bunx @commitlint/cli@20 --edit $1"
+
+[tasks."git:pre-commit"]
+description = "Run cargo lint on staged Rust files"
+run = '''
+#!/usr/bin/env bash
+changed=$(git diff --cached --name-only)
+
+if echo "$changed" | grep -qE "\.rs$|Cargo\.toml$"; then
+    echo "[pre-commit] Rust files detected, running lint..."
+    cargo clippy -- -D warnings || exit 1
+    cargo fmt --check || exit 1
+fi
+'''
+
+[tasks."git:pre-push"]
+description = "Run tests before push"
+run = '''
+#!/usr/bin/env bash
+echo "[pre-push] Running tests..."
+cargo test || exit 1
+'''
