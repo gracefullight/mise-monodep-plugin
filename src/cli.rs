@@ -13,8 +13,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Show sync plan without executing
-    Plan {
+    /// Install all workspace dependencies + link + dedup
+    Install {
         #[arg(default_value = ".")]
         root: PathBuf,
         #[arg(long, action = clap::ArgAction::Append)]
@@ -23,10 +23,8 @@ enum Commands {
         production: bool,
         #[arg(long)]
         no_optional: bool,
-        #[arg(long)]
-        skip_install: bool,
     },
-    /// Install dependencies + workspace link + dedup
+    /// Re-link workspace deps + dedup (skip PM install)
     Sync {
         #[arg(default_value = ".")]
         root: PathBuf,
@@ -36,8 +34,17 @@ enum Commands {
         production: bool,
         #[arg(long)]
         no_optional: bool,
+    },
+    /// Show install plan without executing
+    Plan {
+        #[arg(default_value = ".")]
+        root: PathBuf,
+        #[arg(long, action = clap::ArgAction::Append)]
+        filter: Vec<String>,
         #[arg(long)]
-        skip_install: bool,
+        production: bool,
+        #[arg(long)]
+        no_optional: bool,
     },
     /// Check workspace symlink health
     Doctor {
@@ -45,8 +52,6 @@ enum Commands {
         root: PathBuf,
         #[arg(long, action = clap::ArgAction::Append)]
         filter: Vec<String>,
-        #[arg(long)]
-        skip_install: bool,
     },
     /// Trace why a dependency exists
     Why {
@@ -55,8 +60,6 @@ enum Commands {
         root: PathBuf,
         #[arg(long, action = clap::ArgAction::Append)]
         filter: Vec<String>,
-        #[arg(long)]
-        skip_install: bool,
     },
     /// Add a dependency to a workspace
     Add {
@@ -66,8 +69,6 @@ enum Commands {
         dev: bool,
         #[arg(long, default_value = ".")]
         root: PathBuf,
-        #[arg(long)]
-        skip_install: bool,
     },
     /// Update dependencies in a workspace
     Update {
@@ -75,8 +76,6 @@ enum Commands {
         package: Option<String>,
         #[arg(long, default_value = ".")]
         root: PathBuf,
-        #[arg(long)]
-        skip_install: bool,
     },
     /// Remove a dependency from a workspace
     Remove {
@@ -84,8 +83,6 @@ enum Commands {
         dependency: String,
         #[arg(long, default_value = ".")]
         root: PathBuf,
-        #[arg(long)]
-        skip_install: bool,
     },
 }
 
@@ -107,16 +104,15 @@ fn make_options(production: bool, no_optional: bool, skip_install: bool) -> Sync
 pub fn run() -> i32 {
     let cli = Cli::parse();
     let result = match cli.command {
-        Commands::Plan {
+        Commands::Install {
             root,
             filter,
             production,
             no_optional,
-            skip_install,
         } => {
-            let opts = make_options(production, no_optional, skip_install);
+            let opts = make_options(production, no_optional, false);
             find_workspace_root(&root).and_then(|r| {
-                let plan = engine::build_plan(&r, &filter, &opts)?;
+                let plan = engine::sync(&r, &filter, &opts)?;
                 Ok(serde_json::to_value(&plan).unwrap())
             })
         }
@@ -125,23 +121,27 @@ pub fn run() -> i32 {
             filter,
             production,
             no_optional,
-            skip_install,
         } => {
-            let opts = make_options(production, no_optional, skip_install);
+            let opts = make_options(production, no_optional, true);
             find_workspace_root(&root).and_then(|r| {
                 let plan = engine::sync(&r, &filter, &opts)?;
                 Ok(serde_json::to_value(&plan).unwrap())
             })
         }
-        Commands::Doctor {
+        Commands::Plan {
             root,
             filter,
-            skip_install,
+            production,
+            no_optional,
         } => {
-            let opts = SyncOptions {
-                skip_install,
-                ..SyncOptions::new()
-            };
+            let opts = make_options(production, no_optional, true);
+            find_workspace_root(&root).and_then(|r| {
+                let plan = engine::build_plan(&r, &filter, &opts)?;
+                Ok(serde_json::to_value(&plan).unwrap())
+            })
+        }
+        Commands::Doctor { root, filter } => {
+            let opts = SyncOptions::new();
             find_workspace_root(&root).and_then(|r| {
                 let (healthy, payload) = engine::doctor(&r, &filter, &opts)?;
                 if !healthy {
@@ -155,12 +155,8 @@ pub fn run() -> i32 {
             dependency,
             root,
             filter,
-            skip_install,
         } => {
-            let opts = SyncOptions {
-                skip_install,
-                ..SyncOptions::new()
-            };
+            let opts = SyncOptions::new();
             find_workspace_root(&root).and_then(|r| engine::why(&r, &dependency, &filter, &opts))
         }
         Commands::Add {
@@ -168,12 +164,8 @@ pub fn run() -> i32 {
             package,
             dev,
             root,
-            skip_install,
         } => {
-            let opts = SyncOptions {
-                skip_install,
-                ..SyncOptions::new()
-            };
+            let opts = SyncOptions::new();
             find_workspace_root(&root)
                 .and_then(|r| engine::add_dependency(&r, &workspace, &package, dev, &opts))
         }
@@ -181,12 +173,8 @@ pub fn run() -> i32 {
             workspace,
             package,
             root,
-            skip_install,
         } => {
-            let opts = SyncOptions {
-                skip_install,
-                ..SyncOptions::new()
-            };
+            let opts = SyncOptions::new();
             find_workspace_root(&root)
                 .and_then(|r| engine::update_dependency(&r, &workspace, package.as_deref(), &opts))
         }
@@ -194,12 +182,8 @@ pub fn run() -> i32 {
             workspace,
             dependency,
             root,
-            skip_install,
         } => {
-            let opts = SyncOptions {
-                skip_install,
-                ..SyncOptions::new()
-            };
+            let opts = SyncOptions::new();
             find_workspace_root(&root)
                 .and_then(|r| engine::remove_dependency(&r, &workspace, &dependency, &opts))
         }

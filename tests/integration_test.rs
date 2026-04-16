@@ -160,7 +160,7 @@ fn cli_plan_discovers_workspaces() {
     create_fixture(tmp.path());
 
     let output = monodep_cmd()
-        .args(["plan", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["plan", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -178,7 +178,7 @@ fn cli_plan_resolves_workspace_deps() {
     create_fixture(tmp.path());
 
     let output = monodep_cmd()
-        .args(["plan", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["plan", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -199,7 +199,7 @@ fn cli_sync_creates_workspace_symlinks() {
     create_fixture(tmp.path());
 
     let output = monodep_cmd()
-        .args(["sync", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["sync", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -218,7 +218,7 @@ fn cli_sync_creates_bin_links() {
     create_fixture(tmp.path());
 
     monodep_cmd()
-        .args(["sync", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["sync", tmp.path().to_str().unwrap()])
         .assert()
         .success();
 
@@ -251,7 +251,7 @@ fn cli_sync_writes_managed_marker() {
     create_fixture(tmp.path());
 
     monodep_cmd()
-        .args(["sync", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["sync", tmp.path().to_str().unwrap()])
         .assert()
         .success();
 
@@ -271,13 +271,7 @@ fn cli_sync_filtered_limits_scope() {
     create_fixture(tmp.path());
 
     let output = monodep_cmd()
-        .args([
-            "sync",
-            tmp.path().to_str().unwrap(),
-            "--skip-install",
-            "--filter",
-            "app-a",
-        ])
+        .args(["sync", tmp.path().to_str().unwrap(), "--filter", "app-a"])
         .output()
         .unwrap();
 
@@ -295,12 +289,7 @@ fn cli_sync_production_excludes_dev() {
     create_fixture(tmp.path());
 
     let output = monodep_cmd()
-        .args([
-            "sync",
-            tmp.path().to_str().unwrap(),
-            "--skip-install",
-            "--production",
-        ])
+        .args(["sync", tmp.path().to_str().unwrap(), "--production"])
         .output()
         .unwrap();
 
@@ -317,12 +306,12 @@ fn cli_doctor_healthy_after_sync() {
     create_fixture(tmp.path());
 
     monodep_cmd()
-        .args(["sync", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["sync", tmp.path().to_str().unwrap()])
         .assert()
         .success();
 
     let output = monodep_cmd()
-        .args(["doctor", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["doctor", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -338,7 +327,7 @@ fn cli_doctor_detects_missing_symlinks() {
 
     // No sync → symlinks missing
     let output = monodep_cmd()
-        .args(["doctor", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["doctor", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -355,12 +344,7 @@ fn cli_why_workspace_dep() {
     create_fixture(tmp.path());
 
     let output = monodep_cmd()
-        .args([
-            "why",
-            "shared-lib",
-            tmp.path().to_str().unwrap(),
-            "--skip-install",
-        ])
+        .args(["why", "shared-lib", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -377,12 +361,7 @@ fn cli_why_registry_dep() {
     create_fixture(tmp.path());
 
     let output = monodep_cmd()
-        .args([
-            "why",
-            "left-pad",
-            tmp.path().to_str().unwrap(),
-            "--skip-install",
-        ])
+        .args(["why", "left-pad", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -398,12 +377,7 @@ fn cli_why_unknown_dep_fails() {
     create_fixture(tmp.path());
 
     monodep_cmd()
-        .args([
-            "why",
-            "nonexistent",
-            tmp.path().to_str().unwrap(),
-            "--skip-install",
-        ])
+        .args(["why", "nonexistent", tmp.path().to_str().unwrap()])
         .assert()
         .failure();
 }
@@ -451,7 +425,7 @@ fn dedup_creates_store_and_hardlinks() {
     create_dedup_fixture(tmp.path());
 
     let output = monodep_cmd()
-        .args(["sync", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["sync", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -486,7 +460,7 @@ fn dedup_idempotent() {
 
     // First sync
     let out1 = monodep_cmd()
-        .args(["sync", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["sync", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
     let p1: Value = serde_json::from_slice(&out1.stdout).unwrap();
@@ -494,7 +468,7 @@ fn dedup_idempotent() {
 
     // Second sync — already hardlinked
     let out2 = monodep_cmd()
-        .args(["sync", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["sync", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
     let p2: Value = serde_json::from_slice(&out2.stdout).unwrap();
@@ -510,7 +484,7 @@ fn dedup_skips_single_workspace_packages() {
     create_bun_package(&nm, "unique-pkg", "1.0.0", &[("index.js", "x\n")]);
 
     monodep_cmd()
-        .args(["sync", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["sync", tmp.path().to_str().unwrap()])
         .assert()
         .success();
 
@@ -535,7 +509,7 @@ fn python_dedup_creates_store_and_hardlinks() {
     }
 
     let output = monodep_cmd()
-        .args(["sync", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["sync", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -575,7 +549,7 @@ fn python_dedup_skips_unique() {
     );
 
     let output = monodep_cmd()
-        .args(["sync", tmp.path().to_str().unwrap(), "--skip-install"])
+        .args(["sync", tmp.path().to_str().unwrap()])
         .output()
         .unwrap();
 
