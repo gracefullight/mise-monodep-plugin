@@ -5,7 +5,11 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "monodep", about = "Monorepo dependency deduplication for mise")]
+#[command(
+    name = "monodep",
+    version,
+    about = "Monorepo dependency deduplication for mise"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
