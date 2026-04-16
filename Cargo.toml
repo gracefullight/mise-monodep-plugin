@@ -1,6 +1,6 @@
 [package]
 name = "monodep"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Monorepo dependency deduplication for mise-managed workspaces"
 license = "MIT"
