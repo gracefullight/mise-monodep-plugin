@@ -1,7 +1,5 @@
 use crate::dedup::{deduplicate_workspaces, prune_store};
-use crate::manifest::{
-    bin_entries, closure_for_filters, dependency_entries, discover_workspaces,
-};
+use crate::manifest::{bin_entries, closure_for_filters, dependency_entries, discover_workspaces};
 use crate::models::*;
 use crate::pm::{
     detect_package_manager, run_add, run_install, run_remove, run_update, run_uv_sync,
@@ -121,10 +119,7 @@ fn resolve_local_deps(
         } else if dep.spec.starts_with("file:") {
             let relative = &dep.spec[5..];
             let target = workspace.path.join(relative).canonicalize().map_err(|_| {
-                MonodepError::General(format!(
-                    "File dependency '{}' target not found",
-                    dep.name
-                ))
+                MonodepError::General(format!("File dependency '{}' target not found", dep.name))
             })?;
             let manifest_path = target.join("package.json");
             if !manifest_path.exists() {
@@ -180,16 +175,15 @@ fn sync_local_links(
         linked_deps.push(dep_name.clone());
 
         let dep_manifest_path = target.join("package.json");
-        if dep_manifest_path.exists() {
-            if let Ok(content) = std::fs::read_to_string(&dep_manifest_path) {
-                if let Ok(manifest) = serde_json::from_str::<serde_json::Value>(&content) {
-                    for (bin_name, bin_path) in bin_entries(dep_name, &manifest) {
-                        let bin_target = target.join(&bin_path);
-                        if bin_target.exists() {
-                            relative_symlink(&bin_target, &node_modules.join(".bin").join(&bin_name))?;
-                            linked_bins.push(bin_name);
-                        }
-                    }
+        if dep_manifest_path.exists()
+            && let Ok(content) = std::fs::read_to_string(&dep_manifest_path)
+            && let Ok(manifest) = serde_json::from_str::<serde_json::Value>(&content)
+        {
+            for (bin_name, bin_path) in bin_entries(dep_name, &manifest) {
+                let bin_target = target.join(&bin_path);
+                if bin_target.exists() {
+                    relative_symlink(&bin_target, &node_modules.join(".bin").join(&bin_name))?;
+                    linked_bins.push(bin_name);
                 }
             }
         }
@@ -201,11 +195,7 @@ fn sync_local_links(
     Ok(())
 }
 
-pub fn build_plan(
-    root: &Path,
-    filters: &[String],
-    options: &SyncOptions,
-) -> Result<SyncPlan> {
+pub fn build_plan(root: &Path, filters: &[String], options: &SyncOptions) -> Result<SyncPlan> {
     let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
     let workspaces = discover_workspaces(&root)?;
     let selected = closure_for_filters(&workspaces, filters, options)?;
@@ -251,7 +241,11 @@ pub fn sync(root: &Path, filters: &[String], options: &SyncOptions) -> Result<Sy
 
     for ws_name in &plan.selected_workspaces {
         let ws = &workspaces[ws_name];
-        let local_deps = plan.workspace_links.get(ws_name).cloned().unwrap_or_default();
+        let local_deps = plan
+            .workspace_links
+            .get(ws_name)
+            .cloned()
+            .unwrap_or_default();
         let local_dep_names: HashSet<String> = local_deps.keys().cloned().collect();
 
         let has_pj = ws.path.join("package.json").exists();
@@ -259,7 +253,12 @@ pub fn sync(root: &Path, filters: &[String], options: &SyncOptions) -> Result<Sy
 
         if !options.skip_install {
             if has_pj {
-                run_install(&plan.root, &ws.path, &plan.package_manager, &local_dep_names)?;
+                run_install(
+                    &plan.root,
+                    &ws.path,
+                    &plan.package_manager,
+                    &local_dep_names,
+                )?;
             }
             if has_pp {
                 run_uv_sync(&ws.path)?;
@@ -285,7 +284,11 @@ pub fn sync(root: &Path, filters: &[String], options: &SyncOptions) -> Result<Sy
     Ok(plan)
 }
 
-pub fn doctor(root: &Path, filters: &[String], options: &SyncOptions) -> Result<(bool, serde_json::Value)> {
+pub fn doctor(
+    root: &Path,
+    filters: &[String],
+    options: &SyncOptions,
+) -> Result<(bool, serde_json::Value)> {
     let plan = build_plan(root, filters, options)?;
     let workspaces = discover_workspaces(&plan.root)?;
     let mut issues = Vec::new();
@@ -295,14 +298,17 @@ pub fn doctor(root: &Path, filters: &[String], options: &SyncOptions) -> Result<
         let node_modules = ws.path.join("node_modules");
         for (dep_name, dep) in links {
             let path = node_modules.join(dep_name);
-            if !path.symlink_metadata().is_ok_and(|m| m.file_type().is_symlink()) {
+            if !path
+                .symlink_metadata()
+                .is_ok_and(|m| m.file_type().is_symlink())
+            {
                 issues.push(format!("Missing workspace symlink: {}", path.display()));
-            } else if let Some(target) = &dep.target_path {
-                if let Ok(resolved) = path.canonicalize() {
-                    let canonical_target = target.canonicalize().unwrap_or_else(|_| target.clone());
-                    if resolved != canonical_target {
-                        issues.push(format!("Wrong symlink target: {}", path.display()));
-                    }
+            } else if let Some(target) = &dep.target_path
+                && let Ok(resolved) = path.canonicalize()
+            {
+                let canonical_target = target.canonicalize().unwrap_or_else(|_| target.clone());
+                if resolved != canonical_target {
+                    issues.push(format!("Wrong symlink target: {}", path.display()));
                 }
             }
         }

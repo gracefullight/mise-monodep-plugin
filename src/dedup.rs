@@ -11,7 +11,10 @@ const STORE_PYTHON: &str = "python";
 fn store_path(root: &Path, ecosystem: &str, key: &str) -> PathBuf {
     let (name, version) = key.rsplit_once('@').unwrap_or((key, "0.0.0"));
     let safe_name = name.replace('/', "+");
-    root.join(STORE_DIR).join(ecosystem).join(safe_name).join(version)
+    root.join(STORE_DIR)
+        .join(ecosystem)
+        .join(safe_name)
+        .join(version)
 }
 
 // ── Node.js scanning ────────────────────────────────────────────────
@@ -40,11 +43,20 @@ fn scan_bun_layout(node_modules: &Path) -> BTreeMap<String, Vec<PathBuf>> {
             let pkg_path = pkg_entry.path();
             if pkg_path.is_symlink()
                 || !pkg_path.is_dir()
-                || pkg_path.file_name().unwrap_or_default().to_string_lossy().starts_with('.')
+                || pkg_path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .starts_with('.')
             {
                 continue;
             }
-            if pkg_path.file_name().unwrap_or_default().to_string_lossy().starts_with('@') {
+            if pkg_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .starts_with('@')
+            {
                 if let Ok(scoped) = fs::read_dir(&pkg_path) {
                     for s in scoped.flatten() {
                         if !s.path().is_symlink() && s.path().is_dir() {
@@ -69,11 +81,20 @@ fn scan_flat_layout(node_modules: &Path) -> BTreeMap<String, Vec<PathBuf>> {
         let path = entry.path();
         if path.is_symlink()
             || !path.is_dir()
-            || path.file_name().unwrap_or_default().to_string_lossy().starts_with('.')
+            || path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .starts_with('.')
         {
             continue;
         }
-        if path.file_name().unwrap_or_default().to_string_lossy().starts_with('@') {
+        if path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .starts_with('@')
+        {
             if let Ok(scoped) = fs::read_dir(&path) {
                 for s in scoped.flatten() {
                     if !s.path().is_symlink() && s.path().is_dir() {
@@ -100,7 +121,10 @@ fn try_add_node_package(pkg_dir: &Path, results: &mut BTreeMap<String, Vec<PathB
         return;
     };
     let name = manifest.get("name").and_then(|n| n.as_str()).unwrap_or("");
-    let version = manifest.get("version").and_then(|v| v.as_str()).unwrap_or("");
+    let version = manifest
+        .get("version")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
     if name.is_empty() || version.is_empty() {
         return;
     }
@@ -166,10 +190,14 @@ fn parse_dist_info_key(dist_info: &Path) -> Option<String> {
 
 fn dist_info_top_level(dist_info: &Path) -> Vec<String> {
     let top_level = dist_info.join("top_level.txt");
-    if top_level.exists() {
-        if let Ok(content) = fs::read_to_string(&top_level) {
-            return content.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect();
-        }
+    if top_level.exists()
+        && let Ok(content) = fs::read_to_string(&top_level)
+    {
+        return content
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect();
     }
     Vec::new()
 }
@@ -344,10 +372,7 @@ pub fn prune_store(root: &Path, workspace_paths: &[PathBuf]) -> Result<usize> {
     }
 
     let mut removed = 0;
-    for (ecosystem, active) in [
-        (STORE_NODE, &active_node),
-        (STORE_PYTHON, &active_python),
-    ] {
+    for (ecosystem, active) in [(STORE_NODE, &active_node), (STORE_PYTHON, &active_python)] {
         let eco_dir = store_root.join(ecosystem);
         if !eco_dir.exists() {
             continue;
@@ -366,10 +391,7 @@ pub fn prune_store(root: &Path, workspace_paths: &[PathBuf]) -> Result<usize> {
                 if !version_entry.path().is_dir() {
                     continue;
                 }
-                let name = name_entry
-                    .file_name()
-                    .to_string_lossy()
-                    .replace('+', "/");
+                let name = name_entry.file_name().to_string_lossy().replace('+', "/");
                 let version = version_entry.file_name().to_string_lossy().to_string();
                 let key = format!("{name}@{version}");
                 if !active.contains(&key) {

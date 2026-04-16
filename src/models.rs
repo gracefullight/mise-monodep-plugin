@@ -45,6 +45,7 @@ pub struct ManifestDependency {
 
 #[derive(Debug, Clone)]
 pub struct WorkspacePackage {
+    #[allow(dead_code)]
     pub name: String,
     pub path: PathBuf,
     pub manifest: serde_json::Value,

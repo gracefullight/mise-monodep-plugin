@@ -1,9 +1,8 @@
 use assert_cmd::Command;
-use predicates::prelude::*;
 use serde_json::Value;
 use std::fs;
 use std::os::unix::fs::MetadataExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tempfile::TempDir;
 
 // ── Test fixture helpers ─────────────────────────────────────────────
@@ -135,11 +134,7 @@ fn create_venv_package(
         format!("Name: {name}\nVersion: {version}\n\n"),
     )
     .unwrap();
-    fs::write(
-        dist.join("top_level.txt"),
-        top_level.join("\n") + "\n",
-    )
-    .unwrap();
+    fs::write(dist.join("top_level.txt"), top_level.join("\n") + "\n").unwrap();
     for top in top_level {
         let pkg_dir = site.join(top);
         fs::create_dir_all(&pkg_dir).unwrap();
@@ -230,12 +225,24 @@ fn cli_sync_creates_bin_links() {
     let bin_shared = tmp
         .path()
         .join("packages/app-a/node_modules/.bin/shared-tool");
-    assert!(bin_shared.symlink_metadata().unwrap().file_type().is_symlink());
+    assert!(
+        bin_shared
+            .symlink_metadata()
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
 
     let bin_local = tmp
         .path()
         .join("packages/app-a/node_modules/.bin/local-bin");
-    assert!(bin_local.symlink_metadata().unwrap().file_type().is_symlink());
+    assert!(
+        bin_local
+            .symlink_metadata()
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
 }
 
 #[test]
@@ -507,10 +514,7 @@ fn dedup_skips_single_workspace_packages() {
         .assert()
         .success();
 
-    assert!(!tmp
-        .path()
-        .join(".monodep/store/node/unique-pkg")
-        .exists());
+    assert!(!tmp.path().join(".monodep/store/node/unique-pkg").exists());
 }
 
 // ── Dedup: Python ────────────────────────────────────────────────────
@@ -538,7 +542,12 @@ fn python_dedup_creates_store_and_hardlinks() {
     assert!(output.status.success());
     let payload: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(payload["dedup"]["python"]["deduplicated_packages"], 1);
-    assert!(payload["dedup"]["python"]["files_hardlinked"].as_u64().unwrap() > 0);
+    assert!(
+        payload["dedup"]["python"]["files_hardlinked"]
+            .as_u64()
+            .unwrap()
+            > 0
+    );
 
     let a_init = tmp
         .path()

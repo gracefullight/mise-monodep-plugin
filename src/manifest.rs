@@ -10,14 +10,13 @@ pub fn find_workspace_root(start: &Path) -> Result<PathBuf> {
         if config.exists() {
             let content = std::fs::read_to_string(&config)?;
             let parsed: toml::Value = toml::from_str(&content)?;
-            if let Some(roots) = parsed
+            if parsed
                 .get("monorepo")
                 .and_then(|m| m.get("config_roots"))
                 .and_then(|c| c.as_array())
+                .is_some_and(|roots| !roots.is_empty())
             {
-                if !roots.is_empty() {
-                    return Ok(dir.to_path_buf());
-                }
+                return Ok(dir.to_path_buf());
             }
         }
         candidate = dir.parent();
@@ -37,7 +36,9 @@ pub fn discover_workspaces(root: &Path) -> Result<BTreeMap<String, WorkspacePack
         .and_then(|m| m.get("config_roots"))
         .and_then(|c| c.as_array())
         .ok_or_else(|| {
-            MonodepError::General("No [monorepo].config_roots entries were found in mise.toml".into())
+            MonodepError::General(
+                "No [monorepo].config_roots entries were found in mise.toml".into(),
+            )
         })?;
 
     let mut workspaces = BTreeMap::new();
@@ -76,7 +77,10 @@ pub fn discover_workspaces(root: &Path) -> Result<BTreeMap<String, WorkspacePack
                 .get("name")
                 .and_then(|n| n.as_str())
                 .ok_or_else(|| {
-                    MonodepError::General(format!("Missing package name in {}", manifest_path.display()))
+                    MonodepError::General(format!(
+                        "Missing package name in {}",
+                        manifest_path.display()
+                    ))
                 })?
                 .to_string();
             workspaces.insert(
@@ -143,9 +147,9 @@ pub fn closure_for_filters(
         if selected.contains_key(&name) {
             continue;
         }
-        let ws = workspaces.get(&name).ok_or_else(|| {
-            MonodepError::General(format!("Unknown workspace filter '{name}'"))
-        })?;
+        let ws = workspaces
+            .get(&name)
+            .ok_or_else(|| MonodepError::General(format!("Unknown workspace filter '{name}'")))?;
         selected.insert(name.clone(), ws.clone());
         for dep in dependency_entries(&ws.manifest, options) {
             if dep.spec.starts_with("workspace:") && workspaces.contains_key(&dep.name) {

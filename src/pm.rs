@@ -88,7 +88,10 @@ pub fn run_install(
     if !local_dep_names.is_empty() {
         let manifest: serde_json::Value = serde_json::from_str(&original)?;
         let cleaned = prepare_manifest_for_install(&manifest, local_dep_names);
-        std::fs::write(&manifest_path, serde_json::to_string_pretty(&cleaned)? + "\n")?;
+        std::fs::write(
+            &manifest_path,
+            serde_json::to_string_pretty(&cleaned)? + "\n",
+        )?;
     }
 
     let install_cmd: Vec<&str> = match pm {
@@ -211,16 +214,16 @@ pub fn run_update(workspace_path: &Path, package: Option<&str>, pm: &str) -> Res
 }
 
 pub fn workspace_has_dependency(workspace_path: &Path, package: &str) -> bool {
-    if let Ok(content) = std::fs::read_to_string(workspace_path.join("package.json")) {
-        if let Ok(manifest) = serde_json::from_str::<serde_json::Value>(&content) {
-            for group in &["dependencies", "devDependencies", "optionalDependencies"] {
-                if manifest
-                    .get(group)
-                    .and_then(|d| d.as_object())
-                    .is_some_and(|deps| deps.contains_key(package))
-                {
-                    return true;
-                }
+    if let Ok(content) = std::fs::read_to_string(workspace_path.join("package.json"))
+        && let Ok(manifest) = serde_json::from_str::<serde_json::Value>(&content)
+    {
+        for group in &["dependencies", "devDependencies", "optionalDependencies"] {
+            if manifest
+                .get(group)
+                .and_then(|d| d.as_object())
+                .is_some_and(|deps| deps.contains_key(package))
+            {
+                return true;
             }
         }
     }

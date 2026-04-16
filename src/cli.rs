@@ -90,7 +90,10 @@ enum Commands {
 }
 
 fn emit_json(value: &serde_json::Value) {
-    println!("{}", serde_json::to_string_pretty(value).unwrap_or_default());
+    println!(
+        "{}",
+        serde_json::to_string_pretty(value).unwrap_or_default()
+    );
 }
 
 fn make_options(production: bool, no_optional: bool, skip_install: bool) -> SyncOptions {
@@ -105,7 +108,11 @@ pub fn run() -> i32 {
     let cli = Cli::parse();
     let result = match cli.command {
         Commands::Plan {
-            root, filter, production, no_optional, skip_install,
+            root,
+            filter,
+            production,
+            no_optional,
+            skip_install,
         } => {
             let opts = make_options(production, no_optional, skip_install);
             find_workspace_root(&root).and_then(|r| {
@@ -114,7 +121,11 @@ pub fn run() -> i32 {
             })
         }
         Commands::Sync {
-            root, filter, production, no_optional, skip_install,
+            root,
+            filter,
+            production,
+            no_optional,
+            skip_install,
         } => {
             let opts = make_options(production, no_optional, skip_install);
             find_workspace_root(&root).and_then(|r| {
@@ -122,8 +133,15 @@ pub fn run() -> i32 {
                 Ok(serde_json::to_value(&plan).unwrap())
             })
         }
-        Commands::Doctor { root, filter, skip_install } => {
-            let opts = SyncOptions { skip_install, ..SyncOptions::new() };
+        Commands::Doctor {
+            root,
+            filter,
+            skip_install,
+        } => {
+            let opts = SyncOptions {
+                skip_install,
+                ..SyncOptions::new()
+            };
             find_workspace_root(&root).and_then(|r| {
                 let (healthy, payload) = engine::doctor(&r, &filter, &opts)?;
                 if !healthy {
@@ -133,23 +151,55 @@ pub fn run() -> i32 {
                 Ok(payload)
             })
         }
-        Commands::Why { dependency, root, filter, skip_install } => {
-            let opts = SyncOptions { skip_install, ..SyncOptions::new() };
-            find_workspace_root(&root)
-                .and_then(|r| engine::why(&r, &dependency, &filter, &opts))
+        Commands::Why {
+            dependency,
+            root,
+            filter,
+            skip_install,
+        } => {
+            let opts = SyncOptions {
+                skip_install,
+                ..SyncOptions::new()
+            };
+            find_workspace_root(&root).and_then(|r| engine::why(&r, &dependency, &filter, &opts))
         }
-        Commands::Add { workspace, package, dev, root, skip_install } => {
-            let opts = SyncOptions { skip_install, ..SyncOptions::new() };
+        Commands::Add {
+            workspace,
+            package,
+            dev,
+            root,
+            skip_install,
+        } => {
+            let opts = SyncOptions {
+                skip_install,
+                ..SyncOptions::new()
+            };
             find_workspace_root(&root)
                 .and_then(|r| engine::add_dependency(&r, &workspace, &package, dev, &opts))
         }
-        Commands::Update { workspace, package, root, skip_install } => {
-            let opts = SyncOptions { skip_install, ..SyncOptions::new() };
+        Commands::Update {
+            workspace,
+            package,
+            root,
+            skip_install,
+        } => {
+            let opts = SyncOptions {
+                skip_install,
+                ..SyncOptions::new()
+            };
             find_workspace_root(&root)
                 .and_then(|r| engine::update_dependency(&r, &workspace, package.as_deref(), &opts))
         }
-        Commands::Remove { workspace, dependency, root, skip_install } => {
-            let opts = SyncOptions { skip_install, ..SyncOptions::new() };
+        Commands::Remove {
+            workspace,
+            dependency,
+            root,
+            skip_install,
+        } => {
+            let opts = SyncOptions {
+                skip_install,
+                ..SyncOptions::new()
+            };
             find_workspace_root(&root)
                 .and_then(|r| engine::remove_dependency(&r, &workspace, &dependency, &opts))
         }
